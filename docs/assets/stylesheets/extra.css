@@ -1,0 +1,56 @@
+/* Elements of Code: small additions on top of MkDocs Material. System fonts only. */
+:root {
+  --md-text-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --md-code-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Status badges: 🌱 reading, 🌿 working through it, 🌳 I could teach this */
+.badge {
+  display: inline-block;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid currentColor;
+}
+.badge.seed   { color: #8a6d00; background: rgba(214, 170, 0, 0.12); }
+.badge.sprout { color: #2e7d32; background: rgba(46, 125, 50, 0.10); }
+.badge.tree   { color: #1b5e20; background: rgba(27, 94, 32, 0.16); }
+.badge.idle   { color: var(--md-default-fg-color--light); background: transparent; }
+[data-md-color-scheme="slate"] .badge.seed   { color: #f2c84b; }
+[data-md-color-scheme="slate"] .badge.sprout { color: #7bd389; }
+[data-md-color-scheme="slate"] .badge.tree   { color: #a5e3ad; }
+
+/* Bookshelf cards on the landing page */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0 1.5rem;
+}
+.shelf .book {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-left: 6px solid var(--md-primary-fg-color);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+}
+.shelf .book h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+.shelf .book p { margin: 0.3rem 0; font-size: 0.8rem; }
+.shelf .book ul { margin: 0.3rem 0 0; padding-left: 1rem; font-size: 0.8rem; }
+.shelf .book.later { border-left-color: var(--md-default-fg-color--lighter); }
+
+/* Embedded interactives */
+iframe.embed-auto {
+  width: 100%;
+  height: 1900px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 6px;
+}
+
+/* Long math scrolls instead of widening the page on small phones */
+.arithmatex { overflow-x: auto; overflow-y: hidden; }
+.md-typeset div.arithmatex { margin: 0.6em 0; }
+.md-typeset .katex-display { margin: 0.2em 0; }

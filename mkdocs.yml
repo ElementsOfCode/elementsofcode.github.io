@@ -1,0 +1,73 @@
+site_name: Elements of Code
+site_description: Working notes in Computer Science, one book at a time.
+site_url: https://elementsofcode.github.io/
+copyright: Notes by ElementsOfCode
+
+theme:
+  name: material
+  custom_dir: overrides
+  # Lightweight by design: no web fonts. The browser's own system fonts are used.
+  font: false
+  language: en
+  icon:
+    logo: material/book-open-page-variant
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+extra:
+  generator: false
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra_javascript:
+  - assets/javascripts/site.js
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+
+nav:
+  - Bookshelf: index.md
+  - CLRS:
+      - clrs/index.md
+      - "Ch 1 · The Role of Algorithms": clrs/ch01-role-of-algorithms.md
+      - "Appendix A · Summations": clrs/appendix-a-summations.md
+  - Programming Pearls: shelf/programming-pearls.md
+  - How these notes work: about.md

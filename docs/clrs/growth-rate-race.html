@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Growth Rate Race</title>
+<style>
+/* Layout: a notebook page on faint graph paper; two chart "plates", each with its controls directly above it. */
+:root {
+  --bg: #f4f6f8;
+  --paper: #ffffff;
+  --fg: #16202b;
+  --muted: #5a6776;
+  --grid: #e3e8ee;
+  --axis: #9aa6b4;
+  --accent: #0f6fa8;
+  /* growth ramp: slow (cool) to fast (hot) */
+  --f1: #2b6cb0; --f2: #2c8c99; --f3: #2f9e5b; --f4: #7a9a1f;
+  --f5: #c39200; --f6: #d9690f; --f7: #cf3a2b; --f8: #9b1c6b;
+  --display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141b; --paper: #151d27; --fg: #e6edf4; --muted: #95a3b3; --grid: #233040; --axis: #5d6c7d; --accent: #5cb3ea;
+    --f1: #6aa5ec; --f2: #4fc1cc; --f3: #5fd08a; --f4: #b5d050; --f5: #f2c84b; --f6: #f5964a; --f7: #f2665a; --f8: #e06aac;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141b; --paper: #151d27; --fg: #e6edf4; --muted: #95a3b3; --grid: #233040; --axis: #5d6c7d; --accent: #5cb3ea;
+  --f1: #6aa5ec; --f2: #4fc1cc; --f3: #5fd08a; --f4: #b5d050; --f5: #f2c84b; --f6: #f5964a; --f7: #f2665a; --f8: #e06aac;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+header { display: grid; gap: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 6vw, 44px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 66ch; }
+.muted { color: var(--muted); }
+.plate { background: var(--paper); border: 1px solid var(--grid); border-radius: 12px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--grid); border-radius: 9px; background: var(--bg); }
+.seg button { font: 600 14px var(--body); border: 0; background: none; color: var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chart { width: 100%; overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; font-family: var(--mono); }
+.slider { display: grid; gap: 6px; }
+.slider label { font-family: var(--mono); font-size: 14px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.vals { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.vals div { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.vals span.v { margin-left: auto; overflow-wrap: anywhere; }
+.insight { border-left: 3px solid var(--accent); padding-left: 12px; }
+details { border-top: 1px solid var(--grid); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 600; }
+.tbl { overflow-x: auto; margin-top: 12px; }
+table { border-collapse: collapse; font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; min-width: 640px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; }
+footer { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">CLRS Chapter 1 · Problem 1-1 · Comparing running times</div>
+    <h1>Growth Rate Race</h1>
+    <p class="muted">Each function f(n) is the time an algorithm takes on an input of size n, in microseconds (µs). The first chart shows how fast each one grows. The second flips the question: with a fixed time budget, how big an input can each algorithm finish?</p>
+  </header>
+
+  <section class="plate" aria-labelledby="h-growth">
+    <h2 id="h-growth">1 · How fast each function grows</h2>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Y-axis scale">
+        <button id="sc-log" aria-pressed="true">Log scale (see them all)</button>
+        <button id="sc-lin" aria-pressed="false">Normal scale (feel the explosion)</button>
+      </div>
+    </div>
+    <div class="chart"><svg id="g1" viewBox="0 0 860 440" role="img" aria-label="Growth curves of lg n, square root n, n, n lg n, n squared, n cubed, 2 to the n, and n factorial"></svg></div>
+    <div class="slider">
+      <label for="nslider">Values at n = <b id="nval">20</b></label>
+      <input id="nslider" type="range" min="2" max="50" value="20">
+    </div>
+    <div class="vals" id="vals"></div>
+    <p class="insight" id="ins1"></p>
+  </section>
+
+  <section class="plate" aria-labelledby="h-budget">
+    <h2 id="h-budget">2 · With a fixed time budget, how large can n get?</h2>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Time budget" id="budgets"></div>
+    </div>
+    <div class="chart"><svg id="g2" viewBox="0 0 860 420" role="img" aria-label="Largest n each algorithm can solve within the chosen time budget"></svg></div>
+    <p class="insight" id="ins2"></p>
+    <details>
+      <summary>Show the full Problem 1-1 answer table (spoilers)</summary>
+      <div class="tbl"><table id="tbl"></table></div>
+      <p class="muted" style="margin-top:10px">Assumes 1 µs per step, a 30-day month and a 365-day year, as CLRS does. Values are the largest whole n with f(n) ≤ budget.</p>
+    </details>
+  </section>
+
+  <section class="plate" aria-labelledby="h-mirror">
+    <h2 id="h-mirror">3 · Mirror images: lg n and 2ⁿ</h2>
+    <p class="muted">Same axes, normal scale. 2ⁿ doubles every step; lg n counts the doublings. Fold the chart along the dashed line y = n and one curve lands exactly on the other.</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Axis range">
+        <button id="mz-10" aria-pressed="true">n from 0 to 10</button>
+        <button id="mz-100" aria-pressed="false">n from 0 to 100</button>
+        <button id="mz-1000" aria-pressed="false">n from 0 to 1,000</button>
+      </div>
+    </div>
+    <div class="chart"><svg id="g3" viewBox="0 0 860 520" role="img" aria-label="lg n and 2 to the n plotted on the same linear axes, mirrored across the line y equals n"></svg></div>
+    <p class="insight" id="ins3"></p>
+  </section>
+
+  <footer>Part of the Elements of Code notes. Log scale means every gridline is 10× the one below it.</footer>
+</div>
+
+<script>
+const LN2 = Math.log(2), L10 = Math.log(10);
+const lg = n => Math.log(n) / LN2;
+const lgamma = n => { // log10(n!) = log10 Γ(n+1), Stirling series (smooth for non-integer n)
+  const x = n + 1;
+  if (x < 7) { let p = 1, y = x; while (y < 7) { p *= y; y++; } return (stirling(y) - Math.log(p)) / L10; }
+  return stirling(x) / L10;
+};
+function stirling(x) { return (x - 0.5) * Math.log(x) - x + 0.5 * Math.log(2 * Math.PI) + 1 / (12 * x) - 1 / (360 * x ** 3); }
+// log10 of each f(n)
+const F = [
+  { id: "lg",   label: "lg n",   c: "--f1", l10: n => Math.log10(lg(n)) },
+  { id: "sqrt", label: "√n",     c: "--f2", l10: n => 0.5 * Math.log10(n) },
+  { id: "n",    label: "n",      c: "--f3", l10: n => Math.log10(n) },
+  { id: "nlg",  label: "n lg n", c: "--f4", l10: n => Math.log10(n * lg(n)) },
+  { id: "n2",   label: "n²",     c: "--f5", l10: n => 2 * Math.log10(n) },
+  { id: "n3",   label: "n³",     c: "--f6", l10: n => 3 * Math.log10(n) },
+  { id: "2n",   label: "2ⁿ",     c: "--f7", l10: n => n * Math.log10(2) },
+  { id: "fact", label: "n!",     c: "--f8", l10: n => lgamma(n) },
+];
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a, parent) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
+const col = v => `var(${v})`;
+const sup = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+const pow10 = k => "10" + String(k).split("").map(ch => sup[ch]).join("");
+const group = x => x.toLocaleString("en-US");
+function fmtL10(l) { // human value from log10
+  if (l < 6) { const v = Math.pow(10, l); return v < 10 ? v.toFixed(2).replace(/\.?0+$/, "") : group(Math.round(v)); }
+  const k = Math.floor(l), m = Math.pow(10, l - k);
+  return `${m.toFixed(1)} × ${pow10(k)}`;
+}
+
+/* ---------- Chart 1: growth ---------- */
+let scale = "log", nSel = 20;
+function drawGrowth() {
+  const svg = document.getElementById("g1"); svg.innerHTML = "";
+  const W = 860, H = 440, L = 64, R = 92, T = 16, B = 44;
+  const xMin = 2, xMax = 50;
+  const isLog = scale === "log";
+  const yMax = isLog ? 20 : 1000; // log: 10^0..10^20 ; linear: 0..1000
+  const X = n => L + (n - xMin) / (xMax - xMin) * (W - L - R);
+  const Y = v => T + (1 - v / yMax) * (H - T - B);
+  // grid + y ticks
+  const ticks = isLog ? [0, 4, 8, 12, 16, 20] : [0, 200, 400, 600, 800, 1000];
+  ticks.forEach(t => {
+    el("line", { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: col("--grid"), "stroke-width": 1 }, svg);
+    const tx = el("text", { x: L - 8, y: Y(t) + 4, "text-anchor": "end", "font-size": 12, fill: col("--muted") }, svg);
+    tx.textContent = isLog ? pow10(t) : group(t);
+  });
+  [2, 10, 20, 30, 40, 50].forEach(n => {
+    el("line", { x1: X(n), x2: X(n), y1: H - B, y2: H - B + 5, stroke: col("--axis") }, svg);
+    const tx = el("text", { x: X(n), y: H - B + 20, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg);
+    tx.textContent = n;
+  });
+  el("line", { x1: L, x2: W - R, y1: H - B, y2: H - B, stroke: col("--axis") }, svg);
+  const xl = el("text", { x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); xl.textContent = "input size n";
+  const yl = el("text", { x: 14, y: (T + H - B) / 2, "text-anchor": "middle", "font-size": 12, fill: col("--muted"), transform: `rotate(-90 14 ${(T + H - B) / 2})` }, svg); yl.textContent = isLog ? "f(n) in µs (log scale)" : "f(n) in µs";
+  // clip
+  const defs = el("defs", {}, svg); const cp = el("clipPath", { id: "clip1" }, defs); el("rect", { x: L, y: T - 2, width: W - L - R, height: H - T - B + 2, fill: "#000" }, cp);
+  // selected n marker
+  el("line", { x1: X(nSel), x2: X(nSel), y1: T, y2: H - B, stroke: col("--accent"), "stroke-dasharray": "4 4", "stroke-width": 1.5 }, svg);
+  const labels = [];
+  F.forEach(f => {
+    let d = "", lastIn = null;
+    for (let n = xMin; n <= xMax; n += 0.25) {
+      const l = f.l10(n);
+      const v = isLog ? l : Math.pow(10, l);
+      d += (d ? "L" : "M") + X(n).toFixed(1) + "," + Y(Math.min(v, yMax * 1.6)).toFixed(1);
+      if (v <= yMax) lastIn = [n, v];
+    }
+    el("path", { d, fill: "none", stroke: col(f.c), "stroke-width": 2.5, "clip-path": "url(#clip1)", "stroke-linejoin": "round" }, svg);
+    // label: at right edge if still inside, else where it leaves the top
+    if (lastIn) {
+      const atEnd = lastIn[0] >= xMax - 0.01;
+      labels.push({ f, x: atEnd ? W - R + 6 : X(lastIn[0]) + 4, y: atEnd ? Y(lastIn[1]) + 4 : T + 12, end: atEnd });
+    }
+  });
+  // de-overlap right-edge labels
+  const ends = labels.filter(l => l.end).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+  for (let i = ends.length - 2; i >= 0; i--) if (ends[i].y > H - B) ends[i].y = H - B;
+  labels.forEach(l => {
+    const t = el("text", { x: l.x, y: l.y, "font-size": 13, "font-weight": 600, fill: col(l.f.c), "text-anchor": l.end ? "start" : "start" }, svg);
+    t.textContent = l.f.label + (l.end ? "" : " ↑");
+  });
+  // values panel
+  document.getElementById("nval").textContent = nSel;
+  document.getElementById("vals").innerHTML = F.map(f => `<div><span class="sw" style="background:${col(f.c)}"></span>${f.label}<span class="v">${fmtL10(f.l10(nSel))}</span></div>`).join("");
+  const s = nSel;
+  document.getElementById("ins1").textContent = isLog
+    ? `On the log scale, the polynomials (n, n², n³) bend and flatten out, 2ⁿ climbs as a straight line, and n! curves up even faster. Exponentials leave every polynomial behind. At n = ${s}, n³ is ${fmtL10(F[5].l10(s))} µs but 2ⁿ is ${fmtL10(F[6].l10(s))} µs.`
+    : `On a normal scale, lg n and √n are nearly flat, n lg n and n² climb steadily, and 2ⁿ and n! shoot off the top before n even reaches 12. That vertical wall is what "exponential" means.`;
+}
+document.getElementById("sc-log").onclick = () => { scale = "log"; setPressed(); drawGrowth(); };
+document.getElementById("sc-lin").onclick = () => { scale = "lin"; setPressed(); drawGrowth(); };
+function setPressed() { document.getElementById("sc-log").setAttribute("aria-pressed", scale === "log"); document.getElementById("sc-lin").setAttribute("aria-pressed", scale === "lin"); }
+document.getElementById("nslider").addEventListener("input", e => { nSel = +e.target.value; drawGrowth(); });
+
+/* ---------- Chart 2: budget ---------- */
+const BUDGETS = [
+  ["second", 1e6], ["minute", 6e7], ["hour", 3.6e9], ["day", 8.64e10],
+  ["month", 2.592e12], ["year", 3.1536e13], ["century", 3.1536e15],
+];
+let bSel = 0;
+// returns log10 of the largest n with f(n) <= T (T in µs)
+function maxN(id, T) {
+  const lt = Math.log10(T);
+  switch (id) {
+    case "lg": return { l10: T * Math.log10(2), exact: false };            // n = 2^T
+    case "sqrt": return { l10: 2 * lt, n: T * T };
+    case "n": return { l10: lt, n: T };
+    case "n2": { const n = Math.floor(Math.sqrt(T)); return { l10: Math.log10(n), n }; }
+    case "n3": { let n = Math.floor(Math.cbrt(T)); while ((n + 1) ** 3 <= T) n++; while (n ** 3 > T) n--; return { l10: Math.log10(n), n }; }
+    case "nlg": { let lo = 2, hi = T; while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); (mid * lg(mid) <= T) ? lo = mid : hi = mid; } return { l10: Math.log10(lo), n: lo }; }
+    case "2n": { const n = Math.floor(lg(T)); return { l10: Math.log10(n), n }; }
+    case "fact": { let n = 1, f = 1; while (f * (n + 1) <= T) { n++; f *= n; } return { l10: Math.log10(n), n }; }
+  }
+}
+function fmtN(r) {
+  if (r.n !== undefined && r.n < 1e7) return group(r.n);
+  const k = Math.floor(r.l10), m = Math.pow(10, r.l10 - k);
+  return r.l10 > 1e3 ? `10^${group(Math.round(r.l10))}` : `${m.toFixed(2)} × ${pow10(k)}`;
+}
+function drawBudget() {
+  const svg = document.getElementById("g2"); svg.innerHTML = "";
+  const W = 860, H = 420, L = 78, R = 150, T = 10, B = 40;
+  const xMax = 32; // log10 axis 10^0 .. 10^32
+  const X = l => L + Math.min(l, xMax) / xMax * (W - L - R);
+  const T_us = BUDGETS[bSel][1];
+  const rows = F.map(f => ({ f, r: maxN(f.id, T_us) }));
+  const bh = (H - T - B) / rows.length;
+  [0, 4, 8, 12, 16, 20, 24, 28, 32].forEach(t => {
+    el("line", { x1: X(t), x2: X(t), y1: T, y2: H - B, stroke: col("--grid") }, svg);
+    const tx = el("text", { x: X(t), y: H - B + 18, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); tx.textContent = pow10(t);
+  });
+  const xl = el("text", { x: (L + W - R) / 2, y: H - 4, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg);
+  xl.textContent = `largest n solvable in one ${BUDGETS[bSel][0]} (log scale)`;
+  rows.forEach(({ f, r }, i) => {
+    const y = T + i * bh + bh * 0.18, h = bh * 0.64;
+    const off = r.l10 > xMax;
+    const w = Math.max(3, X(r.l10) - L);
+    el("rect", { x: L, y, width: w, height: h, rx: 4, fill: col(f.c) }, svg);
+    if (off) { // torn edge arrow
+      el("path", { d: `M${X(xMax)},${y} l14,${h / 2} l-14,${h / 2} z`, fill: col(f.c) }, svg);
+    }
+    const lab = el("text", { x: L - 10, y: y + h / 2 + 5, "text-anchor": "end", "font-size": 14, "font-weight": 600, fill: col(f.c) }, svg); lab.textContent = f.label;
+    const v = el("text", { x: off ? X(xMax) - 10 : X(r.l10) + 8, y: y + h / 2 + 5, "font-size": 13, "font-weight": off ? 600 : 500, "text-anchor": off ? "end" : "start", fill: off ? col("--paper") : col("--fg") }, svg);
+    v.textContent = off ? `n = 2^${group(Math.round(T_us))} ≈ ${fmtN(r)} → off the chart` : `n = ${fmtN(r)}`;
+  });
+  const n3 = maxN("n3", T_us).n, e2 = maxN("2n", T_us).n, nn = maxN("n", T_us).n;
+  document.getElementById("ins2").textContent =
+    `In one ${BUDGETS[bSel][0]}, a linear algorithm handles n = ${fmtN({ n: nn, l10: Math.log10(nn) })}, a cubic one only n = ${group(n3)}, and an exponential 2ⁿ algorithm just n = ${e2}. Going from a second to a century multiplies the budget by about 3 billion, yet 2ⁿ only gains ${maxN("2n", 3.1536e15).n - maxN("2n", 1e6).n} more. Faster hardware barely helps a bad algorithm.`;
+}
+const bwrap = document.getElementById("budgets");
+BUDGETS.forEach(([name], i) => {
+  const b = document.createElement("button"); b.textContent = "1 " + name; b.id = "b-" + name;
+  b.setAttribute("aria-pressed", i === bSel);
+  b.onclick = () => { bSel = i; [...bwrap.children].forEach((x, j) => x.setAttribute("aria-pressed", j === bSel)); drawBudget(); };
+  bwrap.appendChild(b);
+});
+// full table
+(function () {
+  const t = document.getElementById("tbl");
+  let h = "<thead><tr><th>f(n)</th>" + BUDGETS.map(b => `<th>1 ${b[0]}</th>`).join("") + "</tr></thead><tbody>";
+  F.forEach(f => { h += `<tr><td style="color:${col(f.c)};font-weight:600">${f.label}</td>` + BUDGETS.map(b => `<td>${fmtN(maxN(f.id, b[1]))}</td>`).join("") + "</tr>"; });
+  t.innerHTML = h + "</tbody>";
+})();
+drawGrowth(); drawBudget();
+/* ---------- Chart 3: mirror ---------- */
+let mz = 10;
+function drawMirror() {
+  const svg = document.getElementById("g3"); svg.innerHTML = "";
+  const W = 860, H = 520, L = 64, R = 70, T = 16, B = 44;
+  const M = mz;
+  const X = v => L + v / M * (W - L - R);
+  const Y = v => T + (1 - v / M) * (H - T - B);
+  const step = M / 5;
+  for (let t = 0; t <= M + 1e-9; t += step) {
+    el("line", { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: col("--grid") }, svg);
+    el("line", { x1: X(t), x2: X(t), y1: T, y2: H - B, stroke: col("--grid") }, svg);
+    const ty = el("text", { x: L - 8, y: Y(t) + 4, "text-anchor": "end", "font-size": 12, fill: col("--muted") }, svg); ty.textContent = group(t);
+    const tx = el("text", { x: X(t), y: H - B + 20, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); tx.textContent = group(t);
+  }
+  const xl = el("text", { x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); xl.textContent = "n";
+  const yl = el("text", { x: 14, y: (T + H - B) / 2, "text-anchor": "middle", "font-size": 12, fill: col("--muted"), transform: `rotate(-90 14 ${(T + H - B) / 2})` }, svg); yl.textContent = "f(n)";
+  const defs = el("defs", {}, svg); const cp = el("clipPath", { id: "clip3" }, defs); el("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "#000" }, cp);
+  // mirror line
+  el("line", { x1: X(0), y1: Y(0), x2: X(M), y2: Y(M), stroke: col("--axis"), "stroke-dasharray": "6 6", "stroke-width": 1.5 }, svg);
+  const ml = el("text", { x: X(M * 0.86) - 14, y: Y(M * 0.86) + 4, "text-anchor": "end", "font-size": 12, fill: col("--muted") }, svg); ml.textContent = "y = n (the mirror)";
+  // curves
+  let d1 = "", d2 = "";
+  const N = 600;
+  for (let i = 0; i <= N; i++) {
+    const n = M * i / N;
+    const v2 = Math.pow(2, n);
+    d2 += (d2 ? "L" : "M") + X(n).toFixed(1) + "," + Y(Math.min(v2, M * 1.5)).toFixed(1);
+    if (n >= M * 0.0005) { const v1 = lg(n); d1 += (d1 ? "L" : "M") + X(n).toFixed(1) + "," + Y(Math.max(v1, -M * 0.5)).toFixed(1); }
+  }
+  el("path", { d: d1, fill: "none", stroke: col("--f1"), "stroke-width": 3, "clip-path": "url(#clip3)" }, svg);
+  el("path", { d: d2, fill: "none", stroke: col("--f7"), "stroke-width": 3, "clip-path": "url(#clip3)" }, svg);
+  // labels
+  const t1 = el("text", { x: W - R + 6, y: Y(lg(M)) + 4, "font-size": 14, "font-weight": 600, fill: col("--f1") }, svg); t1.textContent = "lg n";
+  const n2top = lg(M);
+  const t2 = el("text", { x: X(n2top) + 8, y: T + 14, "font-size": 14, "font-weight": 600, fill: col("--f7") }, svg); t2.textContent = "2ⁿ ↑";
+  // mirrored point pairs
+  const pairs = M <= 10 ? [[1, 2], [2, 4], [3, 8]] : M <= 100 ? [[4, 16], [5, 32], [6, 64]] : [[7, 128], [8, 256], [9, 512]];
+  pairs.forEach(([a, b]) => {
+    el("line", { x1: X(a), y1: Y(b), x2: X(b), y2: Y(a), stroke: col("--muted"), "stroke-dasharray": "2 4", "stroke-width": 1 }, svg);
+    el("circle", { cx: X(a), cy: Y(b), r: 4.5, fill: col("--f7") }, svg);
+    el("circle", { cx: X(b), cy: Y(a), r: 4.5, fill: col("--f1") }, svg);
+    const pa = el("text", { x: X(a) + 8, y: Y(b) + 4, "font-size": 11.5, fill: col("--fg") }, svg); pa.textContent = `(${a}, ${b})`;
+    const pb = el("text", { x: X(b) + 2, y: Y(a) - 9, "font-size": 11.5, fill: col("--fg"), "text-anchor": "middle" }, svg); pb.textContent = `(${b}, ${a})`;
+  });
+  const [a, b] = pairs[2];
+  document.getElementById("ins3").textContent = M === 10
+    ? `Every point flips: 2³ = 8 gives (3, 8) on 2ⁿ, and lg 8 = 3 gives (8, 3) on lg n. 2ⁿ asks "double 3 times, where do I land?" and lg n asks "how many doublings to reach 8?"`
+    : `Zoomed out to ${group(M)}, 2ⁿ shoots up like a wall by n = ${Math.ceil(lg(M))}, while lg n has only climbed to ${lg(M).toFixed(1)} by n = ${group(M)}. Same curve, turned on its side: (${a}, ${b}) on 2ⁿ mirrors (${b}, ${a}) on lg n.`;
+}
+[10, 100, 1000].forEach(v => {
+  document.getElementById("mz-" + v).onclick = () => { mz = v; [10, 100, 1000].forEach(w => document.getElementById("mz-" + w).setAttribute("aria-pressed", w === mz)); drawMirror(); };
+});
+drawMirror();
+</script>
+</body>
+</html>

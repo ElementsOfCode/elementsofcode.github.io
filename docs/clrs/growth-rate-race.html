@@ -169,7 +169,7 @@ function fmtL10(l) { // human value from log10
 
 /* ---------- Chart 1: growth ---------- */
 let scale = "log", nSel = 20;
-const on = new Set(F.map(f => f.id));
+const on = new Set(["lg", "n", "nlg", "n2"]); // shown by default; the rest are one tap away
 function drawChips() {
   const box = document.getElementById("fsel");
   const allOn = on.size === F.length;

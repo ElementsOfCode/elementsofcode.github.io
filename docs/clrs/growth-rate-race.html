@@ -55,6 +55,13 @@ svg { display: block; width: 100%; height: auto; font-family: var(--mono); }
 .slider { display: grid; gap: 6px; }
 .slider label { font-family: var(--mono); font-size: 14px; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { font: 600 14px var(--mono); display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; border: 1.5px solid var(--grid); background: var(--bg); color: var(--muted); cursor: pointer; }
+.chip .sw { opacity: .3; }
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--axis); background: var(--paper); }
+.chip[aria-pressed="true"] .sw { opacity: 1; }
+.chip.all { font-family: var(--body); color: var(--accent); border-style: dashed; }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .vals { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .vals div { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
@@ -87,6 +94,7 @@ footer { color: var(--muted); font-size: 13px; }
         <button id="sc-lin" aria-pressed="false">Normal scale (feel the explosion)</button>
       </div>
     </div>
+    <div class="chips" role="group" aria-label="Functions to plot" id="fsel"></div>
     <div class="chart"><svg id="g1" viewBox="0 0 860 440" role="img" aria-label="Growth curves of lg n, square root n, n, n lg n, n squared, n cubed, 2 to the n, and n factorial"></svg></div>
     <div class="slider">
       <label for="nslider">Values at n = <b id="nval">20</b></label>
@@ -161,6 +169,20 @@ function fmtL10(l) { // human value from log10
 
 /* ---------- Chart 1: growth ---------- */
 let scale = "log", nSel = 20;
+const on = new Set(["lg", "n", "nlg", "n2"]); // shown by default; the rest are one tap away
+function drawChips() {
+  const box = document.getElementById("fsel");
+  const allOn = on.size === F.length;
+  box.innerHTML = F.map(f => `<button class="chip" data-id="${f.id}" aria-pressed="${on.has(f.id)}"><span class="sw" style="background:${col(f.c)}"></span>${f.label}</button>`).join("")
+    + `<button class="chip all" data-id="__all">${allOn ? "Clear all" : "Show all"}</button>`;
+}
+document.getElementById("fsel").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const id = b.dataset.id;
+  if (id === "__all") { if (on.size === F.length) on.clear(); else F.forEach(f => on.add(f.id)); }
+  else if (on.has(id)) on.delete(id); else on.add(id);
+  drawChips(); drawGrowth();
+});
 function drawGrowth() {
   const svg = document.getElementById("g1"); svg.innerHTML = "";
   const W = 860, H = 440, L = 64, R = 92, T = 16, B = 44;
@@ -189,7 +211,12 @@ function drawGrowth() {
   // selected n marker
   el("line", { x1: X(nSel), x2: X(nSel), y1: T, y2: H - B, stroke: col("--accent"), "stroke-dasharray": "4 4", "stroke-width": 1.5 }, svg);
   const labels = [];
-  F.forEach(f => {
+  const shown = F.filter(f => on.has(f.id));
+  if (!shown.length) {
+    const msg = el("text", { x: (L + W - R) / 2, y: (T + H - B) / 2, "text-anchor": "middle", "font-size": 15, fill: col("--muted") }, svg);
+    msg.textContent = "Pick one or more functions above to plot them.";
+  }
+  shown.forEach(f => {
     let d = "", lastIn = null;
     for (let n = xMin; n <= xMax; n += 0.25) {
       const l = f.l10(n);
@@ -214,7 +241,7 @@ function drawGrowth() {
   });
   // values panel
   document.getElementById("nval").textContent = nSel;
-  document.getElementById("vals").innerHTML = F.map(f => `<div><span class="sw" style="background:${col(f.c)}"></span>${f.label}<span class="v">${fmtL10(f.l10(nSel))}</span></div>`).join("");
+  document.getElementById("vals").innerHTML = F.filter(f => on.has(f.id)).map(f => `<div><span class="sw" style="background:${col(f.c)}"></span>${f.label}<span class="v">${fmtL10(f.l10(nSel))}</span></div>`).join("");
   const s = nSel;
   document.getElementById("ins1").textContent = isLog
     ? `On the log scale, the polynomials (n, n², n³) bend and flatten out, 2ⁿ climbs as a straight line, and n! curves up even faster. Exponentials leave every polynomial behind. At n = ${s}, n³ is ${fmtL10(F[5].l10(s))} µs but 2ⁿ is ${fmtL10(F[6].l10(s))} µs.`
@@ -294,7 +321,7 @@ BUDGETS.forEach(([name], i) => {
   F.forEach(f => { h += `<tr><td style="color:${col(f.c)};font-weight:600">${f.label}</td>` + BUDGETS.map(b => `<td>${fmtN(maxN(f.id, b[1]))}</td>`).join("") + "</tr>"; });
   t.innerHTML = h + "</tbody>";
 })();
-drawGrowth(); drawBudget();
+drawChips(); drawGrowth(); drawBudget();
 /* ---------- Chart 3: mirror ---------- */
 let mz = 10;
 function drawMirror() {
